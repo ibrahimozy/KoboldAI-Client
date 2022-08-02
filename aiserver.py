@@ -217,12 +217,12 @@ class vars:
     aibusy      = False  # Stops submissions while the AI is working
     max_length  = 1024    # Maximum number of tokens to submit per action
     ikmax       = 3000   # Maximum number of characters to submit to InferKit
-    genamt      = 80     # Amount of text for each action to generate
+    genamt      = 400     # Amount of text for each action to generate
     ikgen       = 200    # Number of characters for InferKit to generate
     rep_pen     = 1.1    # Default generator repetition_penalty
     rep_pen_slope = 0.7  # Default generator repetition penalty slope
     rep_pen_range = 1024 # Default generator repetition penalty range
-    temp        = 0.5    # Default generator temperature
+    temp        = 0.8    # Default generator temperature
     top_p       = 0.9    # Default generator top_p
     top_k       = 0      # Default generator top_k
     top_a       = 0.0    # Default generator top-a
@@ -854,7 +854,7 @@ def spRequest(filename):
 #==================================================================#
 # Startup
 #==================================================================#
-
+textoutme = ""
 # Parsing Parameters
 parser = argparse.ArgumentParser(description="KoboldAI Server")
 parser.add_argument("--remote", action='store_true', help="Optimizes KoboldAI for Remote Play")
@@ -1182,13 +1182,15 @@ log.setLevel(logging.ERROR)
 # Start flask & SocketIO
 print("{0}Initializing Flask... {1}".format(colors.PURPLE, colors.END), end="")
 from flask import Flask, render_template, Response, request, copy_current_request_context
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 app = Flask(__name__, root_path=os.getcwd())
 app.config['SECRET KEY'] = 'secret!'
 socketio = SocketIO(app, async_method="eventlet")
 socketio.start_background_task(check_for_sp_change)
 print("{0}OK!{1}".format(colors.GREEN, colors.END))
 
+def emit(gelen,gel,**kwargs):
+    pass
 # Start transformers and create pipeline
 if(not vars.use_colab_tpu and vars.model not in ["InferKit", "Colab", "OAI", "GooseAI" , "ReadOnly", "TPUMeshTransformerGPTJ", "TPUMeshTransformerGPTNeoX"]):
     if(not vars.noai):
@@ -2642,6 +2644,42 @@ def do_connect():
 #==================================================================#
 # Event triggered when browser SocketIO sends data to the server
 #==================================================================#
+
+
+@socketio.on('message')
+@app.route('/requests',methods = ['POST'])
+def koboldrequest():
+    vars.max_length = 2048
+    if request.method == 'POST':
+       js = request.json
+       txts = js["text"]
+       if "temp" in js.keys():
+           vars.temp = js["temp"]
+       if "top_p" in js.keys():
+           vars.top_p = js["top_p"]
+       if "top_k" in js.keys():
+           vars.top_k = js["top_k"]
+       if "rep_pen" in js.keys():
+           vars.rep_pen = js["rep_pen"]
+       if "max" in js.keys():
+           vars.genamt = js["max"]
+       if "tfs" in js.keys():
+           vars.tfs = js["tfs"]
+       actionsubmit(txts, actionmode=1)
+    if (len(vars.actions[0]) > 0 and vars.actions[0] != ""):
+       response = app.response_class( response=json.dumps({"data": {"text": vars.actions[0]}}), status=200, mimetype='application/json')
+       newGameRequest()
+       return response
+    else:
+      print("[ERROR] Something went wrong during generation!")
+      response = app.response_class(
+          response=json.dumps({"error": {"extensions": {"code": "Something went wrong during generation!"}}}),
+          status=400,
+          mimetype='application/json'
+      )
+    textoutme = ""
+
+
 @socketio.on('message')
 def get_message(msg):
     if not vars.quiet:
@@ -2661,6 +2699,7 @@ def get_message(msg):
                 vars.chatname = msg['chatname']
                 settingschanged()
                 emit('from_server', {'cmd': 'setchatname', 'data': vars.chatname})
+#TODO
             vars.recentrng = vars.recentrngm = None
             actionsubmit(msg['data'], actionmode=msg['actionmode'])
         elif(vars.mode == "edit"):
@@ -3074,14 +3113,14 @@ def check_for_backend_compilation():
             emit('from_server', {'cmd': 'warnmsg', 'data': 'Compiling TPU backend&mdash;this usually takes 1&ndash;2 minutes...'}, broadcast=True)
             break
     vars.checking = False
-
+#TODO here
 def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False, disable_recentrng=False):
     # Ignore new submissions if the AI is currently busy
     if(vars.aibusy):
         return
     
     while(True):
-        set_aibusy(1)
+        #set_aibusy(1)
 
         if(disable_recentrng):
             vars.recentrng = vars.recentrngm = None
@@ -3094,8 +3133,9 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
         if(actionmode == 1):
             data = data.strip().lstrip('>')
             data = re.sub(r'\n+', ' ', data)
-            if(len(data)):
+            '''if(len(data)):
                 data = f"\n\n> {data}\n"
+                '''
         
         # "Chat" mode
         if(vars.chatmode and vars.gamestarted):
@@ -3120,14 +3160,14 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
                 # Save this first action as the prompt
                 vars.prompt = data
                 # Clear the startup text from game screen
-                emit('from_server', {'cmd': 'updatescreen', 'gamestarted': False, 'data': 'Please wait, generating story...'}, broadcast=True)
+                #emit('from_server', {'cmd': 'updatescreen', 'gamestarted': False, 'data': 'Please wait, generating story...'}, broadcast=True)
                 calcsubmit(data) # Run the first action through the generator
                 if(not vars.abort and vars.lua_koboldbridge.restart_sequence is not None and len(vars.genseqs) == 0):
                     data = ""
                     force_submit = True
                     disable_recentrng = True
                     continue
-                emit('from_server', {'cmd': 'scrolldown', 'data': ''}, broadcast=True)
+                #emit('from_server', {'cmd': 'scrolldown', 'data': ''}, broadcast=True)
                 break
             else:
                 # Save this first action as the prompt
@@ -3144,7 +3184,8 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
                     genresult(genout[0]["generated_text"], flash=False)
                     refresh_story()
                     if(len(vars.actions) > 0):
-                        emit('from_server', {'cmd': 'texteffect', 'data': vars.actions.get_last_key() + 1}, broadcast=True)
+                        pass
+                        #emit('from_server', {'cmd': 'texteffect', 'data': vars.actions.get_last_key() + 1}, broadcast=True)
                     if(not vars.abort and vars.lua_koboldbridge.restart_sequence is not None):
                         data = ""
                         force_submit = True
@@ -3161,7 +3202,7 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
                     genselect(genout)
                     refresh_story()
                 set_aibusy(0)
-                emit('from_server', {'cmd': 'scrolldown', 'data': ''}, broadcast=True)
+                #emit('from_server', {'cmd': 'scrolldown', 'data': ''}, broadcast=True)
                 break
         else:
             # Apply input formatting & scripts before sending to tokenizer
@@ -4116,7 +4157,7 @@ def update_story_chunk(idx: Union[int, str]):
         if(idx - 1 not in vars.actions):
             return
         text = vars.actions[idx - 1]
-
+    textoutme = text
     item = html.escape(text)
     item = vars.comregex_ui.sub(lambda m: '\n'.join('<comment>' + l + '</comment>' for l in m.group().split('\n')), item)  # Add special formatting to comments
     item = vars.acregex_ui.sub('<action>\\1</action>', item)  # Add special formatting to adventure actions
@@ -5352,7 +5393,7 @@ def importgame():
 def importAidgRequest(id):    
     exitModes()
     
-    urlformat = "https://aetherroom.club/api/"
+    urlformat = "https://prompts.aidg.club/api/"
     req = requests.get(urlformat+id)
 
     if(req.status_code == 200):
