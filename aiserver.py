@@ -2666,9 +2666,9 @@ def koboldrequest():
        if "tfs" in js.keys():
            vars.tfs = js["tfs"]
        actionsubmit(txts, actionmode=1)
+       newGameRequest()
     if (len(vars.actions[0]) > 0 and vars.actions[0] != ""):
        response = app.response_class( response=json.dumps({"data": {"text": vars.actions[0]}}), status=200, mimetype='application/json')
-       newGameRequest()
        return response
     else:
       print("[ERROR] Something went wrong during generation!")
