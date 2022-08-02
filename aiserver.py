@@ -2652,9 +2652,15 @@ def koboldrequest():
     vars.max_length = 2048
     if request.method == 'POST':
        js = request.json
+       if "vars" in js.keys():
+           response = app.response_class(response=json.dumps({"data": {"vars": json.dumps(vars)}}), status=200,
+                                         mimetype='application/json')
+           return response
        txts = js["text"]
        if "temp" in js.keys():
            vars.temp = js["temp"]
+       if "dynamicscan" in js.keys():
+           vars.dynamicscan = js["dynamicscan"]
        if "top_p" in js.keys():
            vars.top_p = js["top_p"]
        if "top_k" in js.keys():
