@@ -325,7 +325,7 @@ class vars:
     chatname    = "You"
     adventure   = False
     actionmode  = 1
-    dynamicscan = False
+    dynamicscan = True
     host        = False
     nopromptgen = False
     rngpersist  = False
