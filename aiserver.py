@@ -3139,14 +3139,14 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
         # "Action" mode
         if(actionmode == 1):
             data = data.strip().lstrip('>')
-            data = re.sub(r'\n+', ' ', data)
+            #data = re.sub(r'\n+', ' ', data)
             '''if(len(data)):
                 data = f"\n\n> {data}\n"
                 '''
         
         # "Chat" mode
         if(vars.chatmode and vars.gamestarted):
-            data = re.sub(r'\n+', ' ', data)
+            #data = re.sub(r'\n+', ' ', data)
             if(len(data)):
                 data = f"\n{vars.chatname}: {data}\n"
         
@@ -3157,7 +3157,7 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
         if(not vars.gamestarted):
             vars.submission = data
             execute_inmod()
-            vars.submission = re.sub(r"[^\S\r\n]*([\r\n]*)$", r"\1", vars.submission)  # Remove trailing whitespace, excluding newlines
+            #vars.submission = re.sub(r"[^\S\r\n]*([\r\n]*)$", r"\1", vars.submission)  # Remove trailing whitespace, excluding newlines
             data = vars.submission
             if(not force_submit and len(data.strip()) == 0):
                 assert False
@@ -3217,7 +3217,7 @@ def actionsubmit(data, actionmode=0, force_submit=False, force_prompt_gen=False,
                 data = applyinputformatting(data)
             vars.submission = data
             execute_inmod()
-            vars.submission = re.sub(r"[^\S\r\n]*([\r\n]*)$", r"\1", vars.submission)  # Remove trailing whitespace, excluding newlines
+            #vars.submission = re.sub(r"[^\S\r\n]*([\r\n]*)$", r"\1", vars.submission)  # Remove trailing whitespace, excluding newlines
             data = vars.submission
             # Dont append submission if it's a blank/continue action
             if(data != ""):
